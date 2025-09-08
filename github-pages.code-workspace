@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"name": "GitHub Pages Site",
+			"path": "."
+		}
+	],
+	"settings": {
+		"git.enableSmartCommit": true,
+		"git.confirmSync": false,
+		"liveServer.settings.donotShowInfoMsg": true
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.vscode-github-issue-notebooks",
+			"github.vscode-pull-request-github",
+			"github.copilot",
+			"github.copilot-chat",
+			"ritwickdey.liveserver"
+		]
+	}
+}

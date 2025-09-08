@@ -1,0 +1,17 @@
+{
+    "recommendations": [
+        "ms-vscode.vscode-github-issue-notebooks",
+        "github.vscode-pull-request-github",
+        "github.copilot",
+        "github.copilot-chat",
+        "ritwickdey.liveserver",
+        "formulahendry.auto-rename-tag",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-html-css-support",
+        "ecmel.vscode-html-css",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-json",
+        "esbenp.prettier-vscode",
+        "ms-vscode.live-server-explorer"
+    ]
+}
