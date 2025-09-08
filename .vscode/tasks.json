@@ -1,0 +1,84 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Open with Live Server",
+            "type": "shell",
+            "command": "code",
+            "args": ["--command", "extension.liveServer.goOnline"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Format HTML",
+            "type": "shell",
+            "command": "code",
+            "args": ["--command", "editor.action.formatDocument"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Git Status",
+            "type": "shell",
+            "command": "git",
+            "args": ["status"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Git Add All",
+            "type": "shell",
+            "command": "git",
+            "args": ["add", "."],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Git Commit",
+            "type": "shell",
+            "command": "git",
+            "args": ["commit", "-m", "${input:commitMessage}"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "dependsOn": "Git Add All"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "commitMessage",
+            "description": "Commit message",
+            "default": "Update files",
+            "type": "promptString"
+        }
+    ]
+}
