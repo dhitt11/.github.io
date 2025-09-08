@@ -28,7 +28,7 @@ build/
 *.temp
 
 # VS Code workspace file (optional - remove this line if you want to commit workspace files)
-*.code-workspace
+# *.code-workspace
 
 # Local environment files
 .env
