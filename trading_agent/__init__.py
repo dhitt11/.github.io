@@ -1,0 +1,3 @@
+"""
+Aura Trading Agent Package
+"""
