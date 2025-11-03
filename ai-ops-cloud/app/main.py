@@ -36,20 +36,53 @@ async def video_uploaded(video_name: str, day_number: int, background_tasks: Bac
     """
     logger.info(f"Video upload webhook received: {video_name} for Day {day_number}")
 
-    def process_video():
+    def process_and_save():
         try:
+            # Process video
             from app.workflows.video_processor import VideoProcessingWorkflow
             workflow = VideoProcessingWorkflow()
             video_urls = workflow.process_uploaded_video(video_name, day_number)
 
-            # TODO: Save video URLs to Firestore (next prompt)
-            # TODO: Update Notion with videos (next prompt)
+            # Get existing content data
+            from app.integrations.firestore_db import FirestoreDB
+            from app.integrations.notion_api import NotionClient
+            from app.integrations.slack_api import SlackNotifier
 
-            logger.info(f"Video processing completed: {video_urls}")
+            settings = get_settings()
+            db = FirestoreDB(settings.google_cloud_project)
+            content_data = db.get_content_day(day_number)
+
+            # Update with video URLs
+            if content_data:
+                content_data['videos'] = video_urls
+                content_data['status'] = 'review'
+            else:
+                content_data = {'videos': video_urls, 'status': 'review'}
+
+            db.save_content_day(day_number, content_data)
+
+            # Create Notion review card
+            notion = NotionClient()
+            page_id = notion.create_review_card(day_number, content_data)
+
+            # Save Notion page ID to Firestore
+            content_data['notion_page_id'] = page_id
+            db.save_content_day(day_number, content_data)
+
+            # Notify
+            slack = SlackNotifier(settings.slack_webhook_url)
+            slack.send_message(
+                f"✅ Day {day_number} ready for review!\n\n"
+                f"Videos processed for all platforms.\n"
+                f"Check Notion to review and approve."
+            )
+
+            logger.info(f"Video processing completed for Day {day_number}")
+
         except Exception as e:
             logger.error(f"Video processing failed: {str(e)}")
 
-    background_tasks.add_task(process_video)
+    background_tasks.add_task(process_and_save)
 
     return {
         "status": "processing",
@@ -64,11 +97,23 @@ async def notion_approved(background_tasks: BackgroundTasks):
     return {"status": "publishing"}
 
 @app.post("/workflows/overnight-prep")
-async def overnight_prep():
-    """Scheduled job - runs at 2 AM"""
-    logger.info("Overnight prep started")
-    # Will implement in next prompt
-    return {"status": "completed"}
+async def overnight_prep(day_number: int):
+    """
+    Scheduled job - runs at 2 AM
+
+    Args:
+        day_number: Which day to prep (1-30)
+    """
+    logger.info(f"Overnight prep triggered for Day {day_number}")
+
+    from app.workflows.overnight_prep import OvernightPrepWorkflow
+    workflow = OvernightPrepWorkflow()
+    success = workflow.run(day_number)
+
+    if success:
+        return {"status": "completed", "day": day_number}
+    else:
+        raise HTTPException(status_code=500, detail="Overnight prep failed")
 
 @app.post("/workflows/monitor-engagement")
 async def monitor_engagement():

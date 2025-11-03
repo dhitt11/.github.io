@@ -1,28 +1,29 @@
 """Slack API Integration"""
-import logging
 import requests
-from app.config import get_settings
+import logging
 
 logger = logging.getLogger(__name__)
 
 class SlackNotifier:
-    """Slack webhook notifications"""
+    """Simple Slack notifications via webhook"""
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.webhook_url = self.settings.slack_webhook_url
+    def __init__(self, webhook_url: str):
+        self.webhook_url = webhook_url
 
-    async def send_alert(self, message: str):
-        """Send alert to Slack"""
-        # Implementation will be added in next prompt
-        pass
+    def send_message(self, text: str):
+        """
+        Send message to Slack
 
-    async def send_alerts(self, alerts: list):
-        """Send multiple alerts to Slack"""
-        # Implementation will be added in next prompt
-        pass
+        Args:
+            text: Message text
+        """
+        payload = {"text": text}
 
-    async def send_success(self, message: str):
-        """Send success notification to Slack"""
-        # Implementation will be added in next prompt
-        pass
+        try:
+            response = requests.post(self.webhook_url, json=payload)
+            if response.status_code == 200:
+                logger.info("Slack notification sent")
+            else:
+                logger.error(f"Slack notification failed: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Slack notification error: {str(e)}")
