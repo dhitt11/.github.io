@@ -26,11 +26,35 @@ async def root():
     return {"status": "healthy", "service": "AI Ops Builder"}
 
 @app.post("/webhooks/video-uploaded")
-async def video_uploaded(background_tasks: BackgroundTasks):
-    """Triggered when video uploaded to Cloud Storage"""
-    logger.info("Video upload webhook received")
-    # Will implement in next prompt
-    return {"status": "processing"}
+async def video_uploaded(video_name: str, day_number: int, background_tasks: BackgroundTasks):
+    """
+    Triggered when video uploaded to Cloud Storage
+
+    Args:
+        video_name: Name of uploaded video in bucket
+        day_number: Which day (1-30)
+    """
+    logger.info(f"Video upload webhook received: {video_name} for Day {day_number}")
+
+    def process_video():
+        try:
+            from app.workflows.video_processor import VideoProcessingWorkflow
+            workflow = VideoProcessingWorkflow()
+            video_urls = workflow.process_uploaded_video(video_name, day_number)
+
+            # TODO: Save video URLs to Firestore (next prompt)
+            # TODO: Update Notion with videos (next prompt)
+
+            logger.info(f"Video processing completed: {video_urls}")
+        except Exception as e:
+            logger.error(f"Video processing failed: {str(e)}")
+
+    background_tasks.add_task(process_video)
+
+    return {
+        "status": "processing",
+        "message": f"Video for Day {day_number} is being processed"
+    }
 
 @app.post("/webhooks/notion-approved")
 async def notion_approved(background_tasks: BackgroundTasks):

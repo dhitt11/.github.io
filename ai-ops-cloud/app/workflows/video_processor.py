@@ -1,48 +1,96 @@
 """Video Processing Pipeline"""
 import logging
-from app.utils.video_ffmpeg import VideoProcessor
+from pathlib import Path
+from typing import Dict
 from app.integrations.cloud_storage import CloudStorageClient
+from app.utils.video_ffmpeg import VideoProcessor
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 class VideoProcessingWorkflow:
-    """Processes uploaded videos for different platforms"""
+    """Orchestrates video processing pipeline"""
 
     def __init__(self):
-        self.video_processor = VideoProcessor()
-        self.storage = CloudStorageClient()
+        settings = get_settings()
+        self.storage = CloudStorageClient(
+            project_id=settings.google_cloud_project,
+            bucket_raw=settings.gcs_bucket_raw,
+            bucket_processed=settings.gcs_bucket_processed
+        )
+        self.processor = VideoProcessor()
 
-    async def execute(self, video_path: str):
-        """Execute video processing workflow"""
-        logger.info(f"Starting video processing for: {video_path}")
+    def process_uploaded_video(self, video_blob_name: str, day_number: int) -> Dict[str, str]:
+        """
+        Process uploaded video for all platforms
 
-        try:
-            # Download video from storage
-            local_path = await self.storage.download(video_path)
+        Args:
+            video_blob_name: Name of video in raw bucket
+            day_number: Which day (1-30)
 
-            # Process for different platforms
-            processed_videos = await self._process_for_platforms(local_path)
+        Returns:
+            Dictionary with public URLs for each platform's video
+        """
+        logger.info(f"Processing video for Day {day_number}")
 
-            # Upload processed videos
-            uploaded_paths = await self._upload_processed(processed_videos)
+        # Create temporary paths
+        temp_dir = Path("/tmp/videos")
+        temp_dir.mkdir(exist_ok=True)
 
-            logger.info("Video processing completed")
-            return {
-                "status": "success",
-                "original": video_path,
-                "processed": uploaded_paths
-            }
+        raw_video_path = temp_dir / f"day_{day_number}_raw.mp4"
 
-        except Exception as e:
-            logger.error(f"Video processing failed: {str(e)}")
-            raise
+        # Download raw video from Cloud Storage
+        self.storage.download_file(video_blob_name, str(raw_video_path), bucket_type='raw')
 
-    async def _process_for_platforms(self, video_path: str) -> dict:
-        """Process video for each platform's requirements"""
-        # Implementation will be added in next prompt
-        pass
+        # Process for each platform
+        processed_videos = {}
 
-    async def _upload_processed(self, videos: dict) -> dict:
-        """Upload processed videos to storage"""
-        # Implementation will be added in next prompt
-        pass
+        # LinkedIn
+        linkedin_path = temp_dir / f"day_{day_number}_linkedin.mp4"
+        self.processor.process_for_linkedin(str(raw_video_path), str(linkedin_path))
+        linkedin_url = self.storage.upload_file(
+            str(linkedin_path),
+            f"day_{day_number}/linkedin.mp4",
+            bucket_type='processed'
+        )
+        processed_videos['linkedin'] = linkedin_url
+        logger.info(f"LinkedIn video processed: {linkedin_url}")
+
+        # Facebook
+        facebook_path = temp_dir / f"day_{day_number}_facebook.mp4"
+        self.processor.process_for_facebook(str(raw_video_path), str(facebook_path))
+        facebook_url = self.storage.upload_file(
+            str(facebook_path),
+            f"day_{day_number}/facebook.mp4",
+            bucket_type='processed'
+        )
+        processed_videos['facebook'] = facebook_url
+        logger.info(f"Facebook video processed: {facebook_url}")
+
+        # Instagram
+        instagram_path = temp_dir / f"day_{day_number}_instagram.mp4"
+        self.processor.process_for_instagram(str(raw_video_path), str(instagram_path))
+        instagram_url = self.storage.upload_file(
+            str(instagram_path),
+            f"day_{day_number}/instagram.mp4",
+            bucket_type='processed'
+        )
+        processed_videos['instagram'] = instagram_url
+        logger.info(f"Instagram video processed: {instagram_url}")
+
+        # Twitter
+        twitter_path = temp_dir / f"day_{day_number}_twitter.mp4"
+        self.processor.process_for_twitter(str(raw_video_path), str(twitter_path))
+        twitter_url = self.storage.upload_file(
+            str(twitter_path),
+            f"day_{day_number}/twitter.mp4",
+            bucket_type='processed'
+        )
+        processed_videos['twitter'] = twitter_url
+        logger.info(f"Twitter video processed: {twitter_url}")
+
+        # Cleanup
+        self.processor.cleanup_temp_files()
+
+        logger.info(f"All videos processed for Day {day_number}")
+        return processed_videos
