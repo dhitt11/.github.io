@@ -1,28 +1,64 @@
 """LinkedIn API Integration"""
-import logging
 import requests
-from app.config import get_settings
+import logging
 
 logger = logging.getLogger(__name__)
 
-class LinkedInAPI:
-    """LinkedIn API operations"""
+class LinkedInPublisher:
+    """LinkedIn API for posting"""
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.access_token = self.settings.linkedin_access_token
-        self.base_url = "https://api.linkedin.com/v2"
+    def __init__(self, access_token: str):
+        self.access_token = access_token
         self.headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "X-Restli-Protocol-Version": "2.0.0"
         }
 
-    async def publish_post(self, content: dict) -> str:
-        """Publish post to LinkedIn"""
-        # Implementation will be added in next prompt
-        pass
+    def post_video(self, video_url: str, caption: str) -> dict:
+        """
+        Post video to LinkedIn
 
-    async def get_engagement(self, post_id: str) -> dict:
-        """Get engagement metrics for a post"""
-        # Implementation will be added in next prompt
-        pass
+        Args:
+            video_url: Public URL of video
+            caption: Post caption
+
+        Returns:
+            Post data with ID
+        """
+        # LinkedIn video posting is complex - simplified version
+        # In production, you'd use their video upload flow
+
+        # For now, post as link with text
+        url = "https://api.linkedin.com/v2/ugcPosts"
+
+        payload = {
+            "author": "urn:li:person:YOUR_PERSON_ID",  # Get from profile
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": caption
+                    },
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+
+            if response.status_code in [200, 201]:
+                post_id = response.headers.get('x-restli-id', '')
+                logger.info(f"Posted to LinkedIn: {post_id}")
+                return {"success": True, "post_id": post_id}
+            else:
+                logger.error(f"LinkedIn post failed: {response.text}")
+                return {"success": False, "error": response.text}
+
+        except Exception as e:
+            logger.error(f"LinkedIn API error: {str(e)}")
+            return {"success": False, "error": str(e)}

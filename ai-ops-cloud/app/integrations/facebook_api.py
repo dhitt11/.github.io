@@ -1,25 +1,47 @@
 """Facebook API Integration"""
-import logging
 import requests
-from app.config import get_settings
+import logging
 
 logger = logging.getLogger(__name__)
 
-class FacebookAPI:
-    """Facebook API operations"""
+class FacebookPublisher:
+    """Facebook Graph API for posting"""
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.access_token = self.settings.facebook_access_token
-        self.page_id = self.settings.facebook_page_id
-        self.base_url = "https://graph.facebook.com/v18.0"
+    def __init__(self, access_token: str, page_id: str):
+        self.access_token = access_token
+        self.page_id = page_id
 
-    async def publish_post(self, content: dict) -> str:
-        """Publish post to Facebook"""
-        # Implementation will be added in next prompt
-        pass
+    def post_video(self, video_url: str, caption: str) -> dict:
+        """
+        Post video to Facebook page
 
-    async def get_engagement(self, post_id: str) -> dict:
-        """Get engagement metrics for a post"""
-        # Implementation will be added in next prompt
-        pass
+        Args:
+            video_url: Public URL of video
+            caption: Post caption
+
+        Returns:
+            Post data with ID
+        """
+        url = f"https://graph.facebook.com/v18.0/{self.page_id}/videos"
+
+        payload = {
+            "file_url": video_url,
+            "description": caption,
+            "access_token": self.access_token
+        }
+
+        try:
+            response = requests.post(url, data=payload)
+
+            if response.status_code == 200:
+                data = response.json()
+                post_id = data.get('id', '')
+                logger.info(f"Posted to Facebook: {post_id}")
+                return {"success": True, "post_id": post_id}
+            else:
+                logger.error(f"Facebook post failed: {response.text}")
+                return {"success": False, "error": response.text}
+
+        except Exception as e:
+            logger.error(f"Facebook API error: {str(e)}")
+            return {"success": False, "error": str(e)}

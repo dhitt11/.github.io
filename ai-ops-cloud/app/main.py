@@ -90,11 +90,38 @@ async def video_uploaded(video_name: str, day_number: int, background_tasks: Bac
     }
 
 @app.post("/webhooks/notion-approved")
-async def notion_approved(background_tasks: BackgroundTasks):
+async def notion_approved(day_number: int, background_tasks: BackgroundTasks):
     """Triggered when content approved in Notion"""
-    logger.info("Notion approval webhook received")
-    # Will implement in next prompt
-    return {"status": "publishing"}
+    logger.info(f"Notion approval webhook received for Day {day_number}")
+
+    def publish():
+        try:
+            from app.workflows.multiplatform import MultiPlatformPublisher
+            publisher = MultiPlatformPublisher()
+            results = publisher.publish_day(day_number)
+            logger.info(f"Publishing results: {results}")
+        except Exception as e:
+            logger.error(f"Publishing failed: {str(e)}")
+
+    background_tasks.add_task(publish)
+    return {"status": "publishing", "day": day_number}
+
+@app.post("/publish/day/{day_number}")
+async def publish_day(day_number: int, background_tasks: BackgroundTasks):
+    """Manual trigger to publish a specific day"""
+    logger.info(f"Manual publish triggered for Day {day_number}")
+
+    def publish():
+        try:
+            from app.workflows.multiplatform import MultiPlatformPublisher
+            publisher = MultiPlatformPublisher()
+            results = publisher.publish_day(day_number)
+            logger.info(f"Publishing results: {results}")
+        except Exception as e:
+            logger.error(f"Publishing failed: {str(e)}")
+
+    background_tasks.add_task(publish)
+    return {"status": "publishing", "day": day_number}
 
 @app.post("/workflows/overnight-prep")
 async def overnight_prep(day_number: int):

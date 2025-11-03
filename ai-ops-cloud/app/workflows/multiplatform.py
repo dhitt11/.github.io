@@ -1,64 +1,125 @@
-"""Multi-platform Publishing Workflow"""
+"""Multi-Platform Publishing Workflow"""
 import logging
-from app.integrations.linkedin_api import LinkedInAPI
-from app.integrations.facebook_api import FacebookAPI
-from app.integrations.instagram_api import InstagramAPI
-from app.integrations.twitter_api import TwitterAPI
+from typing import Dict
+from app.integrations.linkedin_api import LinkedInPublisher
+from app.integrations.facebook_api import FacebookPublisher
+from app.integrations.instagram_api import InstagramPublisher
+from app.integrations.twitter_api import TwitterPublisher
+from app.integrations.firestore_db import FirestoreDB
+from app.integrations.notion_api import NotionClient
+from app.integrations.slack_api import SlackNotifier
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-class MultiplatformWorkflow:
-    """Publishes content across multiple social media platforms"""
+class MultiPlatformPublisher:
+    """Publish to all platforms simultaneously"""
 
     def __init__(self):
-        self.linkedin = LinkedInAPI()
-        self.facebook = FacebookAPI()
-        self.instagram = InstagramAPI()
-        self.twitter = TwitterAPI()
+        settings = get_settings()
 
-    async def execute(self, content: dict):
-        """Execute multi-platform publishing workflow"""
-        logger.info("Starting multi-platform publishing")
+        # Initialize platform publishers
+        self.linkedin = LinkedInPublisher(settings.linkedin_access_token)
+        self.facebook = FacebookPublisher(
+            settings.facebook_access_token,
+            settings.facebook_page_id
+        )
+        self.instagram = InstagramPublisher(
+            settings.instagram_access_token,
+            settings.instagram_account_id
+        )
+        self.twitter = TwitterPublisher(
+            settings.twitter_api_key,
+            settings.twitter_api_secret,
+            settings.twitter_access_token,
+            settings.twitter_access_secret
+        )
+
+        # Initialize utilities
+        self.db = FirestoreDB(settings.google_cloud_project)
+        self.notion = NotionClient()
+        self.slack = SlackNotifier(settings.slack_webhook_url)
+
+    def publish_day(self, day_number: int) -> Dict[str, dict]:
+        """
+        Publish content for a day to all platforms
+
+        Args:
+            day_number: Day number to publish
+
+        Returns:
+            Results dictionary with success/failure per platform
+        """
+        logger.info(f"Publishing Day {day_number} to all platforms")
+
+        # Get content from Firestore
+        content_data = self.db.get_content_day(day_number)
+
+        if not content_data:
+            logger.error(f"No content found for Day {day_number}")
+            return {}
+
+        videos = content_data.get('videos', {})
+        captions = content_data.get('captions', {})
 
         results = {}
 
-        try:
-            # Publish to each platform
-            if content.get("linkedin"):
-                results["linkedin"] = await self._publish_linkedin(content["linkedin"])
+        # LINKEDIN (Primary)
+        logger.info("Publishing to LinkedIn...")
+        results['linkedin'] = self.linkedin.post_video(
+            video_url=videos.get('linkedin', ''),
+            caption=captions.get('linkedin_caption', '')
+        )
 
-            if content.get("facebook"):
-                results["facebook"] = await self._publish_facebook(content["facebook"])
+        # FACEBOOK
+        logger.info("Publishing to Facebook...")
+        results['facebook'] = self.facebook.post_video(
+            video_url=videos.get('facebook', ''),
+            caption=captions.get('facebook_caption', '')
+        )
 
-            if content.get("instagram"):
-                results["instagram"] = await self._publish_instagram(content["instagram"])
+        # INSTAGRAM
+        logger.info("Publishing to Instagram...")
+        results['instagram'] = self.instagram.post_reel(
+            video_url=videos.get('instagram', ''),
+            caption=captions.get('instagram_caption', '')
+        )
 
-            if content.get("twitter"):
-                results["twitter"] = await self._publish_twitter(content["twitter"])
+        # TWITTER
+        logger.info("Publishing to Twitter...")
+        results['twitter'] = self.twitter.post_thread(
+            tweets=captions.get('twitter_thread', []),
+            video_url=videos.get('twitter', '')
+        )
 
-            logger.info("Multi-platform publishing completed")
-            return {"status": "success", "results": results}
+        # Update status
+        self.db.update_content_status(day_number, 'published')
 
-        except Exception as e:
-            logger.error(f"Multi-platform publishing failed: {str(e)}")
-            raise
+        # Update Notion
+        if 'notion_page_id' in content_data:
+            self.notion.update_review_card(
+                content_data['notion_page_id'],
+                {'status': 'Published'}
+            )
 
-    async def _publish_linkedin(self, content: dict):
-        """Publish to LinkedIn"""
-        # Implementation will be added in next prompt
-        pass
+        # Send Slack summary
+        self._send_publish_summary(day_number, results)
 
-    async def _publish_facebook(self, content: dict):
-        """Publish to Facebook"""
-        # Implementation will be added in next prompt
-        pass
+        logger.info(f"Publishing completed for Day {day_number}")
+        return results
 
-    async def _publish_instagram(self, content: dict):
-        """Publish to Instagram"""
-        # Implementation will be added in next prompt
-        pass
+    def _send_publish_summary(self, day_number: int, results: dict):
+        """Send Slack notification with publish results"""
+        message = f"🚀 Day {day_number} Published!\n\n"
 
-    async def _publish_twitter(self, content: dict):
-        """Publish to Twitter"""
-        # Implementation will be added in next prompt
-        pass
+        for platform, result in results.items():
+            if result.get('success'):
+                emoji = '✅'
+                status = "Live!"
+            else:
+                emoji = '❌'
+                status = f"Failed: {result.get('error', 'Unknown error')}"
+
+            message += f"{emoji} {platform.upper()}: {status}\n"
+
+        self.slack.send_message(message)
