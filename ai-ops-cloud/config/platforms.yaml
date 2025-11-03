@@ -1,0 +1,63 @@
+# Platform-specific configuration and rules
+
+linkedin:
+  name: "LinkedIn"
+  text_limit: 3000
+  hashtag_limit: 3
+  video:
+    max_size_mb: 200
+    max_duration: 600
+    formats: ["MP4", "MOV"]
+    aspect_ratios: ["16:9", "1:1", "9:16"]
+  best_times:
+    - "7:00-9:00"
+    - "12:00-13:00"
+    - "17:00-18:00"
+  tone: "professional"
+  content_style: "thought_leadership"
+
+facebook:
+  name: "Facebook"
+  text_limit: 63206
+  hashtag_limit: 2
+  video:
+    max_size_mb: 1024
+    max_duration: 240
+    formats: ["MP4", "MOV"]
+    aspect_ratios: ["16:9", "1:1", "9:16"]
+  best_times:
+    - "12:00-15:00"
+    - "18:00-20:00"
+  tone: "conversational"
+  content_style: "engaging"
+
+instagram:
+  name: "Instagram"
+  text_limit: 2200
+  hashtag_limit: 30
+  video:
+    max_size_mb: 100
+    max_duration: 60
+    formats: ["MP4", "MOV"]
+    aspect_ratios: ["9:16", "1:1", "4:5"]
+  best_times:
+    - "11:00-13:00"
+    - "19:00-21:00"
+  tone: "casual"
+  content_style: "visual_storytelling"
+
+twitter:
+  name: "Twitter"
+  text_limit: 280
+  hashtag_limit: 2
+  video:
+    max_size_mb: 512
+    max_duration: 140
+    formats: ["MP4", "MOV"]
+    aspect_ratios: ["16:9", "1:1"]
+  best_times:
+    - "8:00-10:00"
+    - "12:00-13:00"
+    - "17:00-18:00"
+  tone: "direct"
+  content_style: "concise"
