@@ -1,40 +1,43 @@
 """Base agent class for AI Operations"""
 import logging
-from abc import ABC, abstractmethod
 from anthropic import Anthropic
 from app.config import get_settings
 
-logger = logging.getLogger(__name__)
-
-class BaseAgent(ABC):
+class BaseAgent:
     """Base class for all AI agents"""
 
-    def __init__(self):
+    def __init__(self, role: str, system_prompt: str):
+        self.role = role
+        self.system_prompt = system_prompt
         self.settings = get_settings()
         self.client = Anthropic(api_key=self.settings.anthropic_api_key)
-        self.model = "claude-sonnet-4.5-20250929"
+        self.logger = logging.getLogger(f"agent.{role}")
 
-    @abstractmethod
-    def get_system_prompt(self) -> str:
-        """Return the system prompt for this agent"""
-        pass
+    def invoke(self, user_message: str, max_tokens: int = 4000) -> str:
+        """
+        Send message to Claude and get response
 
-    async def execute(self, user_message: str, context: dict = None) -> str:
-        """Execute the agent with given message and context"""
+        Args:
+            user_message: The prompt/question for the agent
+            max_tokens: Maximum tokens in response
+
+        Returns:
+            Agent's response as string
+        """
         try:
-            logger.info(f"{self.__class__.__name__} executing with message: {user_message[:100]}...")
-
-            message = self.client.messages.create(
-                model=self.model,
-                max_tokens=4096,
-                system=self.get_system_prompt(),
-                messages=[{"role": "user", "content": user_message}]
+            response = self.client.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=max_tokens,
+                system=self.system_prompt,
+                messages=[
+                    {"role": "user", "content": user_message}
+                ]
             )
 
-            response = message.content[0].text
-            logger.info(f"{self.__class__.__name__} completed successfully")
-            return response
+            result = response.content[0].text
+            self.logger.info(f"{self.role} agent invoked successfully")
+            return result
 
         except Exception as e:
-            logger.error(f"{self.__class__.__name__} failed: {str(e)}")
+            self.logger.error(f"{self.role} agent error: {str(e)}")
             raise

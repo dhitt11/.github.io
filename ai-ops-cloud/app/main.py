@@ -53,6 +53,44 @@ async def monitor_engagement():
     # Will implement in next prompt
     return {"status": "completed"}
 
+@app.get("/test/agents")
+async def test_agents():
+    """Test all agents"""
+    from app.agents.visionary import VisionaryAgent
+    from app.agents.operator import OperatorAgent
+    from app.agents.implementer import ImplementerAgent
+    from app.agents.sme import SMEAgent
+
+    # Test with sample metrics
+    sample_metrics = {
+        "linkedin": {"impressions": 45000, "engagement": 1200},
+        "facebook": {"impressions": 12000, "engagement": 300},
+        "instagram": {"impressions": 8000, "engagement": 450},
+        "twitter": {"impressions": 20000, "engagement": 600}
+    }
+
+    try:
+        visionary = VisionaryAgent()
+        vision = visionary.analyze_and_recommend(sample_metrics)
+
+        operator = OperatorAgent()
+        brief = operator.create_clear_picture(vision)
+
+        implementer = ImplementerAgent()
+        captions = implementer.generate_captions(brief)
+
+        sme = SMEAgent()
+        review = sme.review_content(captions, brief)
+
+        return {
+            "vision": vision,
+            "brief": brief,
+            "captions": captions,
+            "review": review
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     settings = get_settings()

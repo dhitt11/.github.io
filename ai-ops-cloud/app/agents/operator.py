@@ -1,19 +1,75 @@
 """Operator Agent - Workflow coordination"""
 from app.agents.base_agent import BaseAgent
+import json
+from pathlib import Path
 
 class OperatorAgent(BaseAgent):
-    """Coordination agent for workflow management"""
+    """Coordination and process management"""
 
-    def get_system_prompt(self) -> str:
-        return """You are the Operator Agent - the workflow coordinator of the AI Ops team.
+    def __init__(self):
+        prompt_path = Path("config/prompts/operator.txt")
+        system_prompt = prompt_path.read_text()
+        super().__init__(role="operator", system_prompt=system_prompt)
 
-Your responsibilities:
-1. Coordinate between different agents
-2. Manage task dependencies and sequencing
-3. Track progress and handle errors
-4. Optimize resource allocation
+    def create_clear_picture(self, vision: dict) -> dict:
+        """
+        Create Clear Picture brief from Visionary's recommendation
 
-You ensure smooth execution of multi-step workflows. You understand when to
-delegate tasks, when to intervene, and how to recover from failures.
+        Args:
+            vision: Visionary's content recommendation
 
-Provide clear coordination plans and task assignments."""
+        Returns:
+            Clear Picture brief as dictionary
+        """
+        user_message = f"""
+        Create a Clear Picture brief based on this strategic recommendation:
+
+        {json.dumps(vision, indent=2)}
+
+        Provide the brief in the JSON format specified.
+        """
+
+        response = self.invoke(user_message, max_tokens=2000)
+
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError:
+            self.logger.error("Failed to parse Operator response as JSON")
+            return {"objective": "Create content", "core_message": vision.get("recommended_topic", "")}
+
+    def triage_engagement(self, engagement_item: dict, platform: str) -> dict:
+        """
+        Triage an engagement item (comment, message, etc.)
+
+        Args:
+            engagement_item: The comment/message to triage
+            platform: Which platform it's from
+
+        Returns:
+            Triage result with priority and action
+        """
+        user_message = f"""
+        Triage this {platform} engagement:
+
+        Author: {engagement_item.get('author', 'Unknown')}
+        Content: {engagement_item.get('content', '')}
+
+        Respond with JSON:
+        {{
+          "priority": "high|medium|low",
+          "action": "flag_human|auto_respond|ignore",
+          "reason": "Brief explanation",
+          "suggested_response": "If auto-respond, the response text"
+        }}
+        """
+
+        response = self.invoke(user_message, max_tokens=500)
+
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError:
+            return {
+                "priority": "medium",
+                "action": "flag_human",
+                "reason": "Couldn't parse, better safe than sorry"
+            }
