@@ -1,0 +1,50 @@
+{
+  "school_hours": {
+    "monday":    { "start": "08:00", "end": "15:30" },
+    "tuesday":   { "start": "08:00", "end": "15:30" },
+    "wednesday": { "start": "08:00", "end": "15:30" },
+    "thursday":  { "start": "08:00", "end": "15:30" },
+    "friday":    { "start": "08:00", "end": "15:30" },
+    "saturday":  null,
+    "sunday":    null
+  },
+
+  "_comment_allowed_domains": [
+    "Add your school's website domains here.",
+    "Use *.example.com to allow a domain AND all its subdomains.",
+    "Use example.com (no asterisk) to allow only that exact domain.",
+    "Microsoft/Windows Update entries are required for the OS to keep working.",
+    "Delete or edit the sample school domain at the bottom."
+  ],
+
+  "allowed_domains": [
+    "localhost",
+
+    "microsoft.com",
+    "*.microsoft.com",
+    "windowsupdate.com",
+    "*.windowsupdate.com",
+    "msftconnecttest.com",
+    "*.msftconnecttest.com",
+
+    "khanacademy.org",
+    "*.khanacademy.org",
+
+    "classroom.google.com",
+    "accounts.google.com",
+    "docs.google.com",
+    "drive.google.com",
+    "slides.google.com",
+    "sheets.google.com",
+    "forms.google.com",
+    "meet.google.com",
+
+    "YOUR-SCHOOL-DOMAIN.edu",
+    "*.YOUR-SCHOOL-DOMAIN.edu"
+  ],
+
+  "upstream_dns":      "8.8.8.8",
+  "upstream_dns_port": 53,
+  "listen_port":       53,
+  "log_blocked":       true
+}
